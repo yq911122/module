@@ -1,97 +1,82 @@
-class preprocessor(object):
-	"""docstring for preprocessor"""
-	
-	def __init__(self, df, test=False, yName = None):
-		super(preprocessor, self).__init__()
-		varCols = [e for e in df.columns if e != yName]
-		self.X = df[varCols]
-		self.ref = {}
-		self.test = test
-		if not test:
-			self.Y = df[yName]	
+
+# def shuffle(, seed=1337):
+# 	# something wrong
+# 	np.random.seed(seed)
+# 	shuffle = np.arange(len(.Y))
+# 	np.random.shuffle(shuffle)
+# 	# print shuffle
+# 	# print len(shuffle)
+# 	.X = .X.reindex(shuffle)
+# 	.Y = .Y[shuffle]
 
 
-	def shuffle(self, seed=1337):
-		np.random.seed(seed)
-		shuffle = np.arange(len(self.Y))
-		np.random.shuffle(shuffle)
-		# print shuffle
-		# print len(shuffle)
-		self.X = self.X.reindex(shuffle)
-		self.Y = self.Y[shuffle]
+def __detect_outliers(l, upper=None, lower=None):
+	if upper and lower: outliers = not (lower < l < upper)
+	elif upper: outliers = l >= upper
+	elif lower: outliers = l <= lower
+	else: print "please provide upper bound or lower bound or both."; return None
+	return outliers
 
-	def binarize(self):
-		pass
-
-	def _binarize(self, colNames):
-		for colName in colNames:
-			ref = self.ref[colName]
-			self.ref[colName] = []
-			for k,v in ref.iteritems():
-				l = self.X[colName].map(lambda x: int(x == v))
-				if sum(l.unique()) == 0: continue
-				self.X[k] = l
-				self.ref[colName].extend([k])
-			dropKey = self.ref[colName][0]
-			# print dropKey
-			self.ref[colName] = []
-			self.drop([colName,dropKey], axis=1, inplace=True) #not needed!
-
-	# def delClass(self, classCol, threshold = 5):
-	# 	import everything
-	# 	counts = self.Y.value_counts(sort=False)
-	# 	lessCounts = counts[counts < threshold]
-	# 	exclude = everything.Contain(lessCounts.index)
-	# 	self.Y = self.Y[self.Y != exclude]
-	# 	self.X = self.X[self.Y[classCol] != exclude]
-
-		# self.df = self.df.drop()
-	def cleanOutliers(self):
-		if self.test: self.outliers_to_avg()
-		else: self.delOutliers()
-
-	def delOutliers(self):
-		pass
+def del_outliers(l, upper=None, lower=None):
+	outliers = __detect_outliers(l, upper, lower)
+	return l[not outliers]
 
 
-	def outliers_to_avg(self):
-		pass
+def outliers_to_mean(l, upper=None, lower=None):
+	outliers = __detect_outliers(l, upper, lower)
+	l[outliers] = l[not outliers].mean()
+	return l
 
 
-	def numerizeDf(self, colNames=None):
-		if colNames == None: 
-			if not self.test: colNames = list(self.X.columns)+[self.Y.name]
-			else: colNames = self.X.columns
-		for col in colNames:
-			try:
-				if self.X[col].dtype.name == 'object': self.X[col], self.ref[col] = self.__numerizeSeries(self.X[col])
-			except KeyError:
-				try:
-					self.Y, self.ref[col] = self.__numerizeSeries(self.Y)
-				except KeyError: print "no keys exist!"
+def scale_cols(l, scale=1.0):
+	if l.dtype.name != 'object': 
+		l = (l-l.min())/(l.max()-l.min())*scale
+		return l.round(decimals=3)
+	return 'please numerize the data first!'
 
-	def _numerizeSeries(self,l):
-		# print l		
-		dist = l.unique()
-		ref = dict(zip(dist,range(len(dist))))
-		# print ref
-		return l.map(ref), ref
 
-	def scaleCols(self, colNames=None, scale=1.0):
-		if colNames == None: 
-			if not self.test: colNames = list(self.X.columns)+[self.Y.name]
-			else: colNames = self.X.columns			
-		for col in colNames:
-			if self.X[col].dtype.name != 'object': 
-				self.X[col] = (self.X[col]-self.X[col].min())/(self.X[col].max()-self.X[col].min())*scale
-				self.X[col] = self.X[col].round(decimals=3)
+def small_var(df, thresh = 0.005):
+	var = df.apply(lambda x: (x - x.min())/(x.max()-x.min())).var(axis=0).fillna(0.0)
+	return list(var[var < thresh].index)
 
-	def drop(self,colnames,inplace=False, axis=0):
-		self.X.drop(colnames,inplace=inplace, axis=axis)
+def numerize(l):
+	dist = l.unique()
+	ref = dict(zip(dist,range(len(dist))))
+	l = l.map(ref)
+	return l, ref
 
-	def getProcessedData(self):
-		if not self.test: return self.X, self.Y
-		return self.X
+def discretize_df(df, cols, break_pts_lists):
+	bin_list = [df]
+	for break_pts, col in zip(break_pts_lists, cols):
+		bin_list.extend([discretize(break_pts, df[col])])
+	df = pd.concat(bin_list, axis=1)
+	df = df.drop(labels = cols, axis=1)
+	return df
 
-	def getReference(self):
-		return self.ref
+
+def discretize(break_pts, l):
+	break_pts = sorted(break_pts)
+	names = [l.name + str(e) for e in break_pts]
+	df = pd.DataFrame()
+	for i in range(len(break_pts)):
+		if i == 0: df[names[i]] = l.map(lambda x: int(x < break_pts[i])); continue
+		df[names[i]] = l.map(lambda x: int(break_pts[i-1] <= x < break_pts[i]))
+	# print df.head()
+	return df
+
+# def binarize_df():
+# 	pass
+
+# def binarize(l):
+# 	for colName in colNames:
+# 		ref = .ref[colName]
+# 		.ref[colName] = []
+# 		for k,v in ref.iteritems():
+# 			l = .X[colName].map(lambda x: int(x == v))
+# 			if sum(l.unique()) == 0: continue
+# 			.X[k] = l
+# 			.ref[colName].extend([k])
+# 		dropKey = .ref[colName][0]
+# 		# print dropKey
+# 		.ref[colName] = []
+# 		# .drop([colName,dropKey], axis=1, inplace=True)
