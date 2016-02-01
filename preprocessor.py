@@ -1,14 +1,6 @@
 
-# def shuffle(, seed=1337):
-# 	# something wrong
-# 	np.random.seed(seed)
-# 	shuffle = np.arange(len(.Y))
-# 	np.random.shuffle(shuffle)
-# 	# print shuffle
-# 	# print len(shuffle)
-# 	.X = .X.reindex(shuffle)
-# 	.Y = .Y[shuffle]
-
+def shuffle(df):
+	return df.reindex(np.random.permutation(df.index))
 
 def __detect_outliers(l, upper=None, lower=None):
 	if upper and lower: outliers = not (lower < l < upper)
