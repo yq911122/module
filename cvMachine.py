@@ -11,7 +11,7 @@ def paramSelector(clf, params, X, Y):
 	return clf.best_estimator_, clf.grid_scores_
 
 #untest
-def cross_validation(clf, X, Y, cv=5):
+def cross_validation(clf, X, Y, cv=5, avg=False):
 	'''
 	:clf : classifier with fit() and predict() method
 	:X : pd.DataFrame; features
@@ -20,13 +20,19 @@ def cross_validation(clf, X, Y, cv=5):
 
 	:return : list of float; cross validation scores
 	'''
+	import pandas as pd
 
 	k = [(len(X)-1)/cv*j for j in range(cv+1)]
+	# print len(X)
 	score = [0.0]*cv
-	for i in range(cv):		
-		train_x, train_y = pd.concat([X.loc[:k[i],:],X.loc[k[i+1]:,:]]), pd.concat([Y.loc[:k[i]],Y.loc[k[i+1]:]])
-		test_x, test_y = X.loc[k[i]:k[i+1],:], Y.loc[k[i]:k[i+1]]
+	for i in range(cv):	
+		train_x, train_y = pd.concat([X[:k[i]],X[k[i+1]:]]), pd.concat([Y[:k[i]],Y[k[i+1]:]])
+		test_x, test_y = X[k[i]:k[i+1]], Y[k[i]:k[i+1]]
+
+		# print train_y
+		# print len(test_x)
 		model = clf.fit(X,Y)
 		pred = clf.predict(test_x)
-		score[i] = (pred == test[y_name]).sum()/float(len(test))
+		score[i] = (pred == test_y).sum()/float(len(test_y))
+	if avg: return sum(score)/float(len(score))
 	return score
