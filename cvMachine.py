@@ -22,7 +22,7 @@ def cross_validation(clf, X, Y, cv=5, avg=False):
 	'''
 	import pandas as pd
 
-	k = [(len(X)-1)/cv*j for j in range(cv+1)]
+	k = [(len(X))/cv*j for j in range(cv+1)]
 	# print len(X)
 	score = [0.0]*cv
 	for i in range(cv):	
@@ -31,8 +31,9 @@ def cross_validation(clf, X, Y, cv=5, avg=False):
 
 		# print train_y
 		# print len(test_x)
-		model = clf.fit(X,Y)
+		clf.fit(X,Y)
 		pred = clf.predict(test_x)
+		# pred = [0]*len(test_y)
 		score[i] = (pred == test_y).sum()/float(len(test_y))
 	if avg: return sum(score)/float(len(score))
 	return score
