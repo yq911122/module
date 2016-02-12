@@ -81,17 +81,33 @@ class lm(object):
 		in_list = [e for e in l if e in model.index]
 		if not in_list: 
 			return model.columns[random.randint(0,len(model.columns)-1)]
-		s = model.loc[in_list,:].sum(axis=0)
-		return s.loc[s==s.max()].index[0]
+		selected_model =  model.loc[in_list,:]
+		s = selected_model.sum(axis=0)
+
+		label = s.loc[s==s.max()].index[0]
+		# print label
+		word = selected_model.loc[selected_model[label] == selected_model[label].max(),:].index[0]
+		# print word
+		self.predwords[label].append(word)
+		# print self.predwords
+		return label
 
 
 	def predict(self, df):
+		self.predwords = dict(zip(self.model.columns,[[] for _ in xrange(len(self.model.columns))])) #tricky
 		return df.map(lambda x: self.predict_item(x,len(df)))
 
 	def get_params(self):
 		# print self.a
 		# print self.smooth_method.__name__
 		return (self.a, self.smooth_method.__name__)
+
+	def get_predictive_words(self, n=3):
+		from collections import Counter
+		total_words = {k:len(v) for k,v in self.predwords.iteritems()}
+		most_predictive_words = {k:Counter(v).most_common(n) for k, v in self.predwords.iteritems()} 
+		most_predictive_words = {label:{w:v/float(length) for w, v in words} for label, length, words in zip(total_words.keys(), total_words.values(), most_predictive_words.values())}
+		return most_predictive_words
 
 def main():
 	pass
