@@ -1,3 +1,4 @@
+import numpy as np
 
 def shuffle(df):
 	return df.reindex(np.random.permutation(df.index))
