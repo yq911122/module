@@ -1,9 +1,9 @@
 
-def cvScore(clf, X, Y):
+def sklearn_cross_validation(clf, X, Y, cv=5):
 	from sklearn import cross_validation
-	return cross_validation.cross_val_score(clf, X, Y, cv=5)
+	return cross_validation.cross_val_score(clf, X, Y, cv=cv)
 
-def paramSelector(clf, params, X, Y):
+def param_selector(clf, params, X, Y):
 	from sklearn.grid_search import GridSearchCV
 	# params = {"n_estimators": [10, 50, 100], "min_samples_leaf": [5, 15, 30]}
 	clf = GridSearchCV(clf, params)
