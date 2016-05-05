@@ -21,8 +21,26 @@ def dictFromList(keys, values=None):
 	return dict(zip(keys,values))
 
 def static_vars(**kwargs):
-    def decorate(func):
-        for k in kwargs:
-            setattr(func, k, kwargs[k])
-        return func
-    return decorate
+	def decorate(func):
+		for k in kwargs:
+			setattr(func, k, kwargs[k])
+		return func
+	return decorate
+
+def primes(n):
+	primfac = []
+	d = 2
+	while d*d <= n:
+		while (n % d) == 0:
+			primfac.append(d)  # supposing you want multiple factors repeated
+			n //= d
+		d += 1
+	if n > 1:
+	   primfac.append(n)
+	return primfac
+
+def str_to_list(s):
+	chars = []
+	for c in s:
+		chars.append(c)
+	return chars
