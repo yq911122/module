@@ -38,3 +38,9 @@ def primes(n):
 	if n > 1:
 	   primfac.append(n)
 	return primfac
+
+def str_to_list(s):
+	chars = []
+	for c in s:
+		chars.append(c)
+	return chars

@@ -1,4 +1,5 @@
 
+import numpy as np
 def sklearn_cross_validation(clf, X, Y, cv=5):
 	from sklearn import cross_validation
 	return cross_validation.cross_val_score(clf, X, Y, cv=cv)
@@ -8,9 +9,9 @@ def param_selector(clf, params, X, Y):
 	# params = {"n_estimators": [10, 50, 100], "min_samples_leaf": [5, 15, 30]}
 	clf = GridSearchCV(clf, params)
 	clf.fit(X, Y)
-	return clf.best_estimator_, clf.grid_scores_
+	return clf.best_estimator_
 
-#untest
+# rewrite by using from sklearn.cross_validation import train_test_split
 def cross_validation(clf, X, Y, cv=5, avg=False):
 	'''
 	:clf : classifier with fit() and predict() method
@@ -37,3 +38,24 @@ def cross_validation(clf, X, Y, cv=5, avg=False):
 		score[i] = (pred == test_y).sum()/float(len(test_y))
 	if avg: return sum(score)/float(len(score))
 	return score
+
+def train_test_split(X, y, test_size):
+	from sklearn.cross_validation import train_test_split
+	X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size)
+	return X_train, X_test, y_train, y_test
+
+# 	np.set_printoptions(suppress=True)
+def confusion_matrix_from_cv(clf, X, Y, cv=5):
+	from sklearn.metrics import confusion_matrix
+
+	classes = len(Y.unique())
+	cm = np.zeros([classes+1,classes])
+
+	for i in range(cv):
+		X_train, X_test, y_train, y_test = train_test_split(X, Y, 1/float(cv))
+
+		clf.fit(X_train, y_train)
+		y_pred = clf.predict(X_test)
+		cm[:classes,:classes] += confusion_matrix(y_test, y_pred)
+	cm[classes] = np.array([cm[j,j]/float(cm.sum(1)[j]) for j in range(classes)])
+	return cm
