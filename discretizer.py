@@ -2,6 +2,10 @@ import pandas as pd
 import numpy as np
 
 from math import log
+
+import importHelper
+
+entropy = importHelper.load("entropy")
 from entropy import ent, prob
 
 def slice_ent(s):
@@ -25,7 +29,8 @@ def ent_eval(s, t):
 	# return s1.shape[0]/size*ent(s1)+s2.shape[0]/size*ent(s2)
 
 
-def optimal_cut(s, eval_func=ent_eval):
+# @profile
+def optimal_cut(s, start, end, eval_func=ent_eval):
 	"""
 	s: pd.Series of a column as label
 	eval: function, evaluation method
@@ -35,14 +40,15 @@ def optimal_cut(s, eval_func=ent_eval):
 
 	min_entropy = np.inf
 	optimal = 0
-
+	s = s[start:end]
 	for i in range(1, s.shape[0]):
 		if s[i] == s[i-1]: continue
 		curr_entropy = eval_func(s, i)
 		if min_entropy > curr_entropy:
 			min_entropy = curr_entropy
 			optimal = i
-	return optimal, min_entropy
+	return start + optimal, min_entropy
+
 
 def mdlp_accept(s, e, t):	
 	N = s.shape[0]
@@ -59,33 +65,49 @@ def mdlp_accept(s, e, t):
 def always_cut(s, e, t):
 	return True
 
-def EntropyDiscretizer(f, c, accept_strategy=mdlp_accept):
-	"""
-	f: feature, pd.Series
-	c: related label, pd.Series
+# def EntropyDiscretizer(c, accept_strategy=mdlp_accept):
+# 	"""
+# 	c = c.reindex(f.index)
 	
-	f.sort_values(inplace=True)
+# 	return: list of breaking points, l
+# 	"""
+# 	if ent(c) == 0: return True
+# 	t, e = optimal_cut(c)
+# 	if accept_strategy(c, e, t):
+# 		EntropyDiscretizer.cuts.append(t)
+# 		if t <= EntropyDiscretizer.min_size  or t >= c.shape[0] - EntropyDiscretizer.min_size:
+# 			return True
+
+# 		c1, c2 = c[:t], c[t+1:]
+# 		EntropyDiscretizer(c1, accept_strategy)
+# 		EntropyDiscretizer(c2, accept_strategy)
+# 	return True
+# EntropyDiscretizer.cuts = []
+# EntropyDiscretizer.min_size = 100
+
+# @profile
+def EntropyDiscretizer(c, accept_strategy=mdlp_accept, min_size=100):
+	"""
 	c = c.reindex(f.index)
 	
 	return: list of breaking points, l
 	"""
-	whole_ent = ent(c)
-	if whole_ent == 0: return True
-	t, e = optimal_cut(c)
-	if accept_strategy(c, e, t):
-		EntropyDiscretizer.cuts.append(t)
-		if t <= EntropyDiscretizer.min_size  or t >= c.shape[0] - EntropyDiscretizer.min_size:
-			return True
+	cuts = []
+	intervals = [[0, c.shape[0]]]
+	while intervals != []:
+		currInterval = intervals.pop()
+		start, end = currInterval[0], currInterval[1]
+		if ent(c[start:end]) == 0: continue
+		t, e = optimal_cut(c, start, end)
+		if (t > start + min_size and t < end - min_size) and accept_strategy(c, e, t):
+			cuts.append(t)
+			intervals.append([t, end])
+			intervals.append([start, t])
+	return cuts
 
-		c1, f1 = c[:t], f[:t]
-		c2, f2 = c[t+1:], f[t+1:]
-		EntropyDiscretizer(f1, c1, accept_strategy)
-		EntropyDiscretizer(f2, c2, accept_strategy)
-	return True
-EntropyDiscretizer.cuts = []
-EntropyDiscretizer.min_size = 100
 
 def EntropyDiscretize(X, y, accept_strategy=mdlp_accept):
+	EntropyDiscretizer.cuts = []
 	c = y.copy()
 	df_cuts = []
 	for i in range(X.shape[1]):
@@ -98,13 +120,15 @@ def EntropyDiscretize(X, y, accept_strategy=mdlp_accept):
 
 
 def main():
-	df = pd.read_csv('../bnp-paribas-cardif-claims-management/data/train11.csv', index_col=0)
-	X, y = df[[e for e in df.columns if e != 'target']].values, df['target'].astype(np.int32).values
-	a = EntropyDiscretize(X, y, always_cut)
-	print a
-	text_file = open("Output.txt", "w")
-	text_file.write(str(a))
-	text_file.close()
+	df = pd.read_csv('../bnp-paribas-cardif-claims-management/data/train21.csv', index_col=0)
+	# print df.columns
+	# X, y = df[[e for e in df.columns if e != 'target']].values, df['target'].astype(np.int32).values
+	X, y = df['v10'].values, df['target'].astype(np.int32).values
+	order = np.argsort(X)
+	print EntropyDiscretizer(y[order], mdlp_accept)
+	# text_file = open("Output.txt", "w")
+	# text_file.write(str(a))
+	# text_file.close()
 
 if __name__ == '__main__':
 	main()
